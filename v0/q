@@ -15,13 +15,21 @@ void printWelcomeMessage() {
     printf("\t0. whoami\t: Prints out the result of the whoami command\n");
     printf("\t1. last\t\t: Prints out the result of the last command\n");
     printf("\t2. ls\t\t: Prints out the result of a listing on a user specified path\n");
+    printf("\ta. add command : Adds a new command to the menu.\n");
+    printf("\tc. change directory : Changes process working directory\n");
+    printf("\te. exit : Leave Mid-Day Commander\n");
+    printf("\tp. pwd : Prints working directory\n");
     printf("Option?:");
 }
 
 /*
     Prints out the statistics for the running program
 */
-void printStats(struct rusage usage, int totalTime ) {
+void printStats(struct rusage usage ) {
+    // Calculate the total time it took to execute the process
+    int systemMili = ((usage.ru_stime.tv_usec) / 1000) + ((usage.ru_stime.tv_sec) * 1000); 
+    int userMili = ((usage.ru_utime.tv_usec) / 1000) + ((usage.ru_utime.tv_sec) * 1000); 
+    int totalTime = (systemMili) + (userMili);
 
     // Print out all relevant stats
     printf("\n---Statistics---\nElapsed time: %d milliseconds\n", totalTime);
@@ -30,9 +38,8 @@ void printStats(struct rusage usage, int totalTime ) {
 
 /*
     Creates a child process and executes the inputted command in it
-    Returns the total time to execute the child process
 */
-int child( char* command, char* argv[] ) {
+void child( char* command, char* argv[] ) {
     // Fork
     int rc = fork();
 
@@ -47,28 +54,12 @@ int child( char* command, char* argv[] ) {
     if( rc == 0 ) //we are child
     {
         execvp( command, argv ); 
-        return 0;
     }
 
     // We must be the parent, so wait for the child to finish
     else
     {
-        // declare start and end timeval
-        struct timeval startTime;
-        struct timeval endTime;
-
-        // Define the starting time and the wait
-        gettimeofday(&startTime, NULL);
         wait(NULL);
-
-        // Define the ending time
-        gettimeofday(&endTime, NULL);
-
-        // Calculate the time difference in milliseconds, then return
-        int startingTime = ((startTime.tv_usec) / 1000) + ((startTime.tv_sec) * 1000); 
-        int endingTime = ((endTime.tv_usec) / 1000) + ((endTime.tv_sec) * 1000); 
-        int totalTime = endingTime - startingTime;
-        return totalTime;
     }
 }
 
@@ -76,45 +67,42 @@ int child( char* command, char* argv[] ) {
     Function which calls child for the "whoami" process
 */
 void sayWho() {
-
     // Set argv to the appropriate value
     char* argv[] = {"whoami", NULL};
 
     // Initialize the struct to keep track of the stats
     struct rusage usage;
 
-    // Create a child process and record total time
-    int totalTime = child( "whoami", argv);
+    // Create a child process
+    child( "whoami", argv);
 
     // Update usage and print out the stats
     getrusage( RUSAGE_SELF, &usage );
-    printStats( usage , totalTime);
+    printStats( usage );
 }
 
 /*
     Function which calls child for the "last" process
 */
 void sayLast() {
-
     // Set argv to the appropriate value
     char* argv[] = {"last", NULL};
 
     // Initialize the struct to keep track of the stats
     struct rusage usage;
 
-    // Create a child process and record total time
-    int totalTime = child( "last", argv );
+    // Create a child process
+    child( "last", argv );
 
     // Update usage and print out the stats
     getrusage( RUSAGE_SELF, &usage );
-    printStats( usage, totalTime );
+    printStats( usage );
 }
 
 /*
     Function which calls child for the "ls" process
 */
 void list() {
-
     // Allocate strings for the arguments we want to accept
     char *args = malloc(128 * sizeof(char));
     char *path = malloc(128 * sizeof(char));
@@ -142,16 +130,20 @@ void list() {
         argv[2] = args;
     }
 
-    // Create a child process and record total time
-    int totalTime = child( "ls", argv );
+    // Create a child process
+    child( "ls", argv );
 
     // Update usage and print out the stats
     getrusage( RUSAGE_SELF, &usage );
-    printStats( usage, totalTime );
+    printStats( usage );
 
     // free the memory taken up by path and args
     free(args);
     free(path);
+}
+
+void exitShell() {
+    char* argv[] = {"exit", NULL};
 }
 
 /*
@@ -172,6 +164,10 @@ void operate( char command ) {
             printf("\n-- Directory Listing --\n");
             list();
             break;
+        case 'e' :
+            printf("Logging you out, Commander.\n");
+            exitShell();
+            break;
         
         // If the command is not recognized, return an error message
         default:
@@ -183,7 +179,7 @@ void operate( char command ) {
 
 
 int main( int argc, char** argv) {
-    printf("===== Mid-Day Commander, v0 =====");
+    printf("\n===== Mid-Day Commander, v0 =====");
     
     // Loop forever
     while(1)
@@ -202,4 +198,7 @@ int main( int argc, char** argv) {
     }	
     return 0;
 }
+
+
+
 
