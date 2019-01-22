@@ -5,8 +5,6 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <string.h>
-//TODO Add the ability to read from a file(exit when we reach EOF)
-
 
 /*
     linkedList to hold the user's commands
@@ -53,6 +51,8 @@ node *addNode( node* head, char* argv[] ) {
 */ 
 void freeUserCommands( node* userCommands ) {
     node *theNextOne;
+    
+    // Free each command
     for( node *current = userCommands; current != NULL; current = theNextOne )
     {
         free( current->argv[0] );
@@ -110,7 +110,7 @@ int child( char* command, char* argv[] ) {
     // Fork
     int rc = fork();
 
-    // If we encountered some kind of erroe, return an error message and exit
+    // If we encountered some kind of error, return an error message and exit
     if( rc < 0 )
     {
         printf("We forked up");
@@ -349,7 +349,7 @@ void operateInt( int command, node *userCommands ) {
             // If the user entered an invalid number, return this error message
             if( !commandMatch )
             {
-                printf("\nNot sure what that means commander.\n");
+                printf("\n\nNot sure what that means commander.\n");
             }
     }
 }
@@ -372,6 +372,7 @@ node *operateChar( char command, node *userCommands ) {
             break;
         case 'e' :
             printf("\nLogging you out, Commander.\n");
+            freeUserCommands( userCommands );        
             exit(0);
             break;
         case 'p' :
@@ -381,7 +382,7 @@ node *operateChar( char command, node *userCommands ) {
         
         // If the user enterd an invalid character, return an error message
         default:
-            printf("\nNot sure what that means commander.\n");
+            printf("\n\nNot sure what that means commander.\n");
     }
     
     return userCommands;
@@ -392,35 +393,52 @@ node *operateChar( char command, node *userCommands ) {
 */
 int main( int argc, char** argv) {
     printf("===== Mid-Day Commander, v0 =====");
+
+    // String to hold the user input.
+    char commandBuff[128];
+
+    // Integer and character to get what the user typed.
+    int commandInt;
+    char commandChar;
+
+    // LinkedList to store the commands added by the user.
     node *userCommands = NULL;   
-    
-    // Loop forever
+
+
+    // Loop forever (more or less)
     while(1)
     {
-        // Print out the list of commands the user can input
+
+        // Print out the list of commands the user can input.
         printWelcomeMessage( userCommands );
 
-        // Get the user's input
-        char command_buff[128];
-        int commandInt;
-        char commandChar;
-        fgets(command_buff, 128, stdin);
+        // If we have not reached the end of a file, then operate.
+        if(fgets(commandBuff, 128, stdin) )
+        {
         
-        // sscanf returns the number of things that it read correctly
-        if( sscanf(command_buff, "%d", &commandInt) )
-        {
-            // We were given an int, so parse accordingly
-            operateInt( commandInt, userCommands );
-        }
-        else
-        {
-            // We were given a character (or other non-integer), so parse accordingly
-            sscanf( command_buff, "%c", &commandChar );
-            userCommands = operateChar( commandChar, userCommands );
+            // sscanf returns the number of things that it read correctly.
+            if( sscanf(commandBuff, "%d", &commandInt) )
+            {
+                // We were given an int, so parse accordingly.
+                operateInt( commandInt, userCommands );
+            }
+            else
+            {
+                // We were given a character (or other non-integer), so parse accordingly.
+                sscanf( commandBuff, "%c", &commandChar );
+                userCommands = operateChar( commandChar, userCommands );
+            }
         }
 
-        
+        // If we have reached the end of a file, print the exit message and exit.
+        else
+        {
+            printf("\nLogging you out, Commander.\n");
+            freeUserCommands( userCommands );        
+            exit(0);
+        }
     }	
+
     return 0;
 }
 
