@@ -39,7 +39,7 @@ int child( char* command, char* argv[] ) {
     // If we encountered some kind of erroe, return an error message and exit
     if( rc < 0 )
     {
-        printf("We forked up");
+        printf("Error while forking.\n");
         exit(1);
     }
     
