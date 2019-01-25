@@ -117,7 +117,7 @@ int child( char* command, char* argv[] ) {
     // If we encountered some kind of error, return an error message and exit
     if( rc < 0 )
     {
-        printf("We forked up");
+        printf("Error while forkint.\n");
         exit(1);
     }
     
