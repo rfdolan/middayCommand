@@ -13,12 +13,13 @@ typedef struct node {
     char* command;
     char** argv;
     struct node* next;
+    int isBckg;
 } node;    
 
 /*
     adds a new node to the end of the linkedList
 */
-node *addNode( node* head, char* argv[] ) {
+node *addNode( node* head, char* argv[], int isBckg ) {
     node* current = head;
     
     // If we currently have no nodes in the list, create a new head
@@ -28,6 +29,7 @@ node *addNode( node* head, char* argv[] ) {
         newHead->command = argv[0];
         newHead->argv = argv;
         newHead->next = NULL;
+        newHead->isBckg = isBckg;
         return newHead;
     }
     
@@ -42,6 +44,7 @@ node *addNode( node* head, char* argv[] ) {
     newNode->command = argv[0];
     newNode->argv = argv;
     newNode->next = NULL;
+    newNode->isBckg = isBckg;
     current->next = newNode;
     return head;
 } 
@@ -89,6 +92,7 @@ void printWelcomeMessage( node* userCommands ) {
     printf("\tc. change directory : Changes process working directory\n");
     printf("\te. exit : Leave Mid-Day Commander\n");
     printf("\tp. pwd : Prints working directory\n");
+    printf("\tr. running processes : Print list of running processes\n");
     printf("Option?:");
 }
 
@@ -257,9 +261,17 @@ node *addCommand( node* userCommands ) {
         argv[argPosition] = argument;
         argument = strtok( NULL, " ");
     }
-    
-    // Add the command to the linkedList of commands
-    userCommands = addNode(userCommands, argv);
+
+    // If this is a background operation, set the flag
+    if(!strcmp(argv[argPosition], "&"))
+    {
+        userCommands = addNode(userCommands, argv, 1);
+    }
+    else
+    {
+        // Add the command to the linkedList of commands
+        userCommands = addNode(userCommands, argv, 0);
+    }
     return userCommands;
 }
 
@@ -404,6 +416,8 @@ int main( int argc, char** argv) {
     // LinkedList to store the commands added by the user.
     node *userCommands = NULL;   
 
+    // LinkedList containing the currently running processes
+//    node *runningProcesses = NULL;
 
     // Loop forever (more or less)
     while(1)
