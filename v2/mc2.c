@@ -108,9 +108,16 @@ bckgNode *removeNode( bckgNode* ourList, int pid ){
         {
             if( current->next->pid == pid )
             {
-                bckgNode *second = current->next->next;
-                free( current->next );
-                current->next = second;
+				if(current->next != NULL)
+				{
+                	bckgNode *second = current->next->next;
+                	free( current->next );
+                	current->next = second;
+				}
+				else
+				{
+					current->next = NULL;
+				}
             }
         }                
         return head;

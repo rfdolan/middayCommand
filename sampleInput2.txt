@@ -1,6 +1,8 @@
 0
 1
 a
+free -m &
+a
 make -j4 O=~/kernelDst &
 3
 r
