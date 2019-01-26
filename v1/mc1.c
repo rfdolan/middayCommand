@@ -349,7 +349,7 @@ void operateInt( int command, node *userCommands ) {
             // If the user entered an invalid number, return this error message
             if( !commandMatch )
             {
-                printf("\n\nNot sure what that means commander.\n");
+                printf("\nNot sure what that means commander.\n");
             }
     }
 }
@@ -382,7 +382,7 @@ node *operateChar( char command, node *userCommands ) {
         
         // If the user enterd an invalid character, return an error message
         default:
-            printf("\n\nNot sure what that means commander.\n");
+            printf("\nNot sure what that means commander.\n");
     }
     
     return userCommands;
@@ -412,6 +412,7 @@ int main( int argc, char** argv) {
         // Print out the list of commands the user can input.
         printWelcomeMessage( userCommands );
 
+        commandInt = -1;
         // If we have not reached the end of a file, then operate.
         if(fgets(commandBuff, 128, stdin) )
         {

@@ -12,14 +12,21 @@
 typedef struct node {
     char* command;
     char** argv;
+    int background;
     struct node* next;
-    int isBckg;
 } node;    
+
+typedef struct bckgNode {
+    char* name;
+    struct timeval startTime;
+    int pid;
+    struct bckgNode* next;
+} bckgNode;
 
 /*
     adds a new node to the end of the linkedList
 */
-node *addNode( node* head, char* argv[], int isBckg ) {
+node *addNode( node* head, char* argv[], int background ) {
     node* current = head;
     
     // If we currently have no nodes in the list, create a new head
@@ -28,8 +35,44 @@ node *addNode( node* head, char* argv[], int isBckg ) {
         node* newHead = malloc( sizeof(node) );
         newHead->command = argv[0];
         newHead->argv = argv;
+        newHead->background = background;
         newHead->next = NULL;
-        newHead->isBckg = isBckg;
+        printf("Okay, added with ID 3!\n");
+        return newHead;
+    }
+    int commandNum = 4;
+    // Get to the end of the linkedList
+    while( current->next != NULL )
+    {
+        current = current->next;
+        commandNum++;
+    }
+    
+    // Allocate space for a new node and assign its fields
+    node* newNode = malloc( sizeof(node) );
+    newNode->command = argv[0];
+    newNode->argv = argv;
+    newNode->background = background;
+    newNode->next = NULL;
+    current->next = newNode;
+    printf("Okay, added with ID %d!\n", commandNum);
+    return head;
+} 
+   
+/*
+    adds a new node to the end of the background linkedList
+*/
+bckgNode *addBackground( bckgNode* head, char* name, struct timeval startTime, int pid ) {
+    bckgNode* current = head;
+    
+    // If we currently have no nodes in the list, create a new head
+    if( current == NULL )
+    {
+        bckgNode* newHead = malloc( sizeof(bckgNode) );
+        newHead->name = name;
+        newHead->startTime = startTime;
+        newHead->pid = pid;
+        newHead->next = NULL;
         return newHead;
     }
     
@@ -40,15 +83,40 @@ node *addNode( node* head, char* argv[], int isBckg ) {
     }
     
     // Allocate space for a new node and assign its fields
-    node* newNode = malloc( sizeof(node) );
-    newNode->command = argv[0];
-    newNode->argv = argv;
+    bckgNode* newNode = malloc( sizeof(bckgNode) );
+    newNode->name = name;
+    newNode->startTime = startTime;
+    newNode->pid = pid;
     newNode->next = NULL;
-    newNode->isBckg = isBckg;
     current->next = newNode;
     return head;
 } 
-   
+
+/*
+    removes the head from the list of background nodes
+*/
+bckgNode *removeNode( bckgNode* ourList, int pid ){
+    bckgNode *head = ourList;
+    if( (head->next == NULL) && (head->pid == pid))
+    {
+        free( ourList );
+        return NULL;
+    }
+    else
+    {
+        for( bckgNode *current = ourList; current->next != NULL; current = current->next) 
+        {
+            if( current->next->pid == pid )
+            {
+                bckgNode *second = current->next->next;
+                free( current->next );
+                current->next = second;
+            }
+        }                
+        return head;
+    }
+}
+
 /*
     Function to free the space taken up by the linkedList of user added commands
 */ 
@@ -107,17 +175,16 @@ void printStats(struct rusage usage, int totalTime ) {
 }
 
 /*
-    Creates a child process and executes the inputted command in it
-    Returns the total time to execute the child process
+    Creates a background child process
 */
-int child( char* command, char* argv[] ) {
+bckgNode* bckgChild( char* command, char* argv[], bckgNode *backgroundProcesses  ) {
     // Fork
     int rc = fork();
 
     // If we encountered some kind of error, return an error message and exit
     if( rc < 0 )
     {
-        printf("Error while forkint.\n");
+        printf("Error while forking.\n");
         exit(1);
     }
     
@@ -125,73 +192,95 @@ int child( char* command, char* argv[] ) {
     if( rc == 0 ) //we are child
     {
         execvp( command, argv ); 
-        return 0;
+        return backgroundProcesses;
+    }
+
+    // We must be the parent, so add the child to the list of processes
+    else
+    {
+        struct timeval startTime;
+        gettimeofday(&startTime, NULL);
+        backgroundProcesses = addBackground(backgroundProcesses, command, startTime, rc);
+        return backgroundProcesses;
+    }
+}
+
+/*
+    Creates a child process and executes the inputted command in it
+*/
+void child( char* command, char* argv[]) {
+    // Fork
+    int rc = fork();
+
+    // If we encountered some kind of error, return an error message and exit
+    if( rc < 0 )
+    {
+        printf("Error while forking.\n");
+        exit(1);
+    }
+    
+    // If fork returned 0, we are the child, so use execvp to run the process
+    if( rc == 0 ) //we are child
+    {
+        execvp( command, argv ); 
+        return;
     }
 
     // We must be the parent, so wait for the child to finish
     else
     {
-        // declare start and end timeval
+
+        // Define variables to hold usage and start and end times
+        struct rusage usage;
         struct timeval startTime;
         struct timeval endTime;
 
-        // Define the starting time and the wait
+        // Get time for start, wait, and get end time
         gettimeofday(&startTime, NULL);
         wait(NULL);
-
-        // Define the ending time
         gettimeofday(&endTime, NULL);
 
-        // Calculate the time difference in milliseconds, then return
+        // Translate time into an integer number of milliseconds
         int startingTime = ((startTime.tv_usec) / 1000) + ((startTime.tv_sec) * 1000); 
         int endingTime = ((endTime.tv_usec) / 1000) + ((endTime.tv_sec) * 1000); 
-        int totalTime = endingTime - startingTime;
-        return totalTime;
+        int totalTime = endingTime - startingTime;    
+
+        // Get usage and print stats
+        getrusage(RUSAGE_SELF, &usage);
+        printStats( usage, totalTime);
+
     }
 }
 
 /*
     Function which calls child for the "whoami" process
 */
-void sayWho() {
+void sayWho( ) {
 
     // Set argv to the appropriate value
     char* argv[] = {"whoami", NULL};
 
-    // Initialize the struct to keep track of the stats
-    struct rusage usage;
-
     // Create a child process and record total time
-    int totalTime = child( "whoami", argv);
-
-    // Update usage and print out the stats
-    getrusage( RUSAGE_SELF, &usage );
-    printStats( usage , totalTime);
+    child( "whoami", argv);
 }
 
 /*
     Function which calls child for the "last" process
 */
-void sayLast() {
+void sayLast( ) {
 
     // Set argv to the appropriate value
     char* argv[] = {"last", NULL};
 
-    // Initialize the struct to keep track of the stats
-    struct rusage usage;
-
     // Create a child process and record total time
-    int totalTime = child( "last", argv );
+    child( "last", argv);
 
-    // Update usage and print out the stats
-    getrusage( RUSAGE_SELF, &usage );
-    printStats( usage, totalTime );
 }
 
 /*
     Function which calls child for the "ls" process
 */
-void list() {
+void list( ) {
 
     // Allocate strings for the arguments we want to accept
     char *args = malloc(128 * sizeof(char));
@@ -200,8 +289,6 @@ void list() {
     // Initialize argv
     char* argv[] = {"ls", NULL, NULL, NULL};
 
-    // Initialize the struct to keep tracl of the stats
-    struct rusage usage;
 
     // Get the arguments and path
     printf("Arguments?: ");
@@ -220,12 +307,8 @@ void list() {
         argv[2] = args;
     }
 
-    // Create a child process and record total time
-    int totalTime = child( "ls", argv );
-
-    // Update usage and print out the stats
-    getrusage( RUSAGE_SELF, &usage );
-    printStats( usage, totalTime );
+    // Create a child proccess
+    child( "ls", argv);
 
     // free the memory taken up by path and args
     free(args);
@@ -265,6 +348,7 @@ node *addCommand( node* userCommands ) {
     // If this is a background operation, set the flag
     if(!strcmp(argv[argPosition], "&"))
     {
+        argv[argPosition] = NULL;
         userCommands = addNode(userCommands, argv, 1);
     }
     else
@@ -313,30 +397,30 @@ void printDir() {
     free( currentD );
 }
 
+
+
+
 /*
     Function that processes integer input
 */
-void operateInt( int command, node *userCommands ) {
+bckgNode* operateInt( int command, node *userCommands, bckgNode *backgroundProcesses ) {
     int commandMatch = 0;
     int idNum = 2;
-    struct rusage usage;
-    int totalTime;
-
     // Do the appropriate command
     switch(command)
     {
         case 0:
             printf("\n-- Who Am I? --\n");
-            sayWho();
+            sayWho( );
             break;
     
         case 1 :
             printf("\n-- Last Logins --\n");
-            sayLast();
+            sayLast( );
             break;
         case 2 :
             printf("\n-- Directory Listing --\n");
-            list();
+            list( );
             break;
 
         default:
@@ -348,11 +432,17 @@ void operateInt( int command, node *userCommands ) {
                 // If this command's number matches the one the user asked for
                 if(command == idNum)
                 {
+                    // If this is a background command
+                    if( current->background )
+                    {
+                        backgroundProcesses = bckgChild( current->command, current-> argv, backgroundProcesses );
+                    }
+                    else
+                    { 
+                        // Perform the function, while also gathering and returning data
+                        child( current->command, current->argv);
+                    }
 
-                    // Perform the function, while also gathering and returning data
-                    totalTime = child( current->command, current->argv );
-                    getrusage( RUSAGE_SELF, &usage );
-                    printStats( usage, totalTime );
                     // Set the command matched flag
                     commandMatch = 1;   
                 }
@@ -361,15 +451,16 @@ void operateInt( int command, node *userCommands ) {
             // If the user entered an invalid number, return this error message
             if( !commandMatch )
             {
-                printf("\n\nNot sure what that means commander.\n");
+                printf("\nNot sure what that means commander.\n");
             }
     }
+    return backgroundProcesses;
 }
 
 /*
     Function that takes the operation character and calls the correct function
 */
-node *operateChar( char command, node *userCommands ) {
+node *operateChar( char command, node *userCommands, bckgNode *backgroundProcesses ) {
     
     // Do the appropriate command
     switch(command) 
@@ -382,7 +473,34 @@ node *operateChar( char command, node *userCommands ) {
             printf("\n-- Change Directory --\n");
             changeDir();
             break;
-        case 'e' :
+        case 'e' :;
+            int pid = 1;
+            while(pid > 0)
+            {
+                // Initialize variables to hold usage and time
+                struct rusage usage;
+                pid = wait3(NULL, 0, &usage);
+                struct timeval endTime;
+                int totalTime;
+                gettimeofday(&endTime, NULL);
+                int jobNum = 1;
+                
+                // Loop through the list of background processes until we hit the one that just finished
+                for(bckgNode *current = backgroundProcesses; current != NULL; current = current->next)
+                {
+                    if(pid == current->pid)
+                    {
+                        int startTime = ((current->startTime.tv_usec) / 1000) + ((current->startTime.tv_sec) * 1000);
+                        int endingTime = ((endTime.tv_usec)/1000 + (endTime.tv_sec)*1000);
+                        totalTime = endingTime - startTime;
+                
+                        printf("-- Job Complete [%d] --\nProcess ID: %d\n", jobNum, pid);
+                        printStats( usage, totalTime );
+                        backgroundProcesses = removeNode( backgroundProcesses, pid );
+                    }
+                    jobNum++;
+                }
+            }
             printf("\nLogging you out, Commander.\n");
             freeUserCommands( userCommands );        
             exit(0);
@@ -391,10 +509,19 @@ node *operateChar( char command, node *userCommands ) {
             printf("\n-- Current Directory --\n");
             printDir();
             break;
+        case 'r' :
+            printf("\n-- Background Processes --\n");
+            bckgNode *current = backgroundProcesses;
+            while(current != NULL)
+            {
+                printf("%s\n", current->name);
+                current = current->next;
+            }
+            break;
         
         // If the user enterd an invalid character, return an error message
         default:
-            printf("\n\nNot sure what that means commander.\n");
+            printf("\nNot sure what that means commander.\n");
     }
     
     return userCommands;
@@ -417,7 +544,7 @@ int main( int argc, char** argv) {
     node *userCommands = NULL;   
 
     // LinkedList containing the currently running processes
-//    node *runningProcesses = NULL;
+    bckgNode *runningProcesses = NULL;
 
     // Loop forever (more or less)
     while(1)
@@ -425,7 +552,12 @@ int main( int argc, char** argv) {
 
         // Print out the list of commands the user can input.
         printWelcomeMessage( userCommands );
+        
+        int pid;
+        struct rusage usage;
 
+
+        commandInt = -1; 
         // If we have not reached the end of a file, then operate.
         if(fgets(commandBuff, 128, stdin) )
         {
@@ -434,13 +566,16 @@ int main( int argc, char** argv) {
             if( sscanf(commandBuff, "%d", &commandInt) )
             {
                 // We were given an int, so parse accordingly.
-                operateInt( commandInt, userCommands );
+                runningProcesses = operateInt( commandInt, userCommands, runningProcesses );
+            }
+            else if( sscanf( commandBuff, "%c", &commandChar ) )
+            {
+                // We were given a character (or other non-integer), so parse accordingly.
+                userCommands = operateChar( commandChar, userCommands, runningProcesses );
             }
             else
             {
-                // We were given a character (or other non-integer), so parse accordingly.
-                sscanf( commandBuff, "%c", &commandChar );
-                userCommands = operateChar( commandChar, userCommands );
+                printf("\nNot sure what that means commander.\n");
             }
         }
 
@@ -450,6 +585,33 @@ int main( int argc, char** argv) {
             printf("\nLogging you out, Commander.\n");
             freeUserCommands( userCommands );        
             exit(0);
+        }
+
+        // Loop while there are background processes that have been completed
+        while( (pid = wait3( NULL, WNOHANG, &usage)) > 0 )
+        {
+    
+            // Declare and set the end time
+            struct timeval endTimeval;
+            gettimeofday(&endTimeval, 0);
+            int totalTime;
+            int jobNum = 1;
+    
+            // Loop through the 
+            for(bckgNode *current = runningProcesses; current != NULL; current = current->next)
+            {
+                if(pid == current->pid)
+                {
+                     
+                    int startTime = ((current->startTime.tv_usec) / 1000) + ((current->startTime.tv_sec) * 1000);
+                    int endingTime = ((endTimeval.tv_usec)/1000 + (endTimeval.tv_sec)*1000);
+                    totalTime = endingTime - startTime;
+                    printf("-- Job Complete [%d] --\nProcess ID: %d\n", jobNum, pid);
+                    printStats( usage, totalTime );
+                    removeNode( runningProcesses, pid );
+                }
+                jobNum++;
+            }
         }
     }	
 
