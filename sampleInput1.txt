@@ -1,0 +1,8 @@
+p 
+c 
+/home/
+p
+a
+free -m
+3
+e

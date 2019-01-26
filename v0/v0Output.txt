@@ -1,0 +1,74 @@
+d-Day Commander, v0 =====
+G'day, Commander! What command would you like to run?
+	0. whoami	: Prints out the result of the whoami command
+	1. last		: Prints out the result of the last command
+	2. ls		: Prints out the result of a listing on a user specified path
+Option?:^C
+raymond@raymond-VirtualBox:~/cs3013/middayCommand$ ./mc0
+===== Mid-Day Commander, v0 =====
+G'day, Commander! What command would you like to run?
+	0. whoami	: Prints out the result of the whoami command
+	1. last		: Prints out the result of the last command
+	2. ls		: Prints out the result of a listing on a user specified path
+Option?:0
+
+-- Who Am I? --
+raymond
+
+---Statistics---
+Elapsed time: 0 milliseconds
+Page Faults: 0
+Page Faults (reclaimed): 76
+
+G'day, Commander! What command would you like to run?
+	0. whoami	: Prints out the result of the whoami command
+	1. last		: Prints out the result of the last command
+	2. ls		: Prints out the result of a listing on a user specified path
+Option?:1
+
+-- Last Logins --
+raymond  tty7         :0               Sat Jan 19 14:45    gone - no logout
+reboot   system boot  4.4.162rfdolan   Sat Jan 19 13:15   still running
+raymond  tty7         :0               Thu Jan 17 13:39 - crash (1+23:36)
+reboot   system boot  4.4.162rfdolan   Thu Jan 17 13:37   still running
+raymond  tty7         :0               Tue Jan 15 23:58 - down   (00:07)
+reboot   system boot  4.4.162rfdolan   Tue Jan 15 23:58 - 00:05  (00:07)
+raymond  tty7         :0               Tue Jan 15 09:15 - crash  (14:42)
+reboot   system boot  4.4.162rfdolan   Tue Jan 15 09:15 - 00:05  (14:50)
+raymond  tty7         :0               Sat Jan 12 19:38 - down   (00:34)
+guest-0o tty7         :0               Sat Jan 12 19:35 - 19:37  (00:01)
+reboot   system boot  4.4.162rfdolan   Sat Jan 12 04:39 - 20:12  (15:32)
+raymond  tty7         :0               Sat Jan 12 19:32 - crash  (-14:-52)
+reboot   system boot  4.4.162rfdolan   Sat Jan 12 04:36 - 20:12  (15:35)
+raymond  tty7         :0               Fri Jan 11 13:52 - down  (1+04:52)
+reboot   system boot  4.4.0-31-generic Fri Jan 11 13:52 - 18:45 (1+04:52)
+
+wtmp begins Fri Jan 11 13:52:11 2019
+
+---Statistics---
+Elapsed time: 10 milliseconds
+Page Faults: 0
+Page Faults (reclaimed): 81
+
+G'day, Commander! What command would you like to run?
+	0. whoami	: Prints out the result of the whoami command
+	1. last		: Prints out the result of the last command
+	2. ls		: Prints out the result of a listing on a user specified path
+Option?:2
+
+-- Directory Listing --
+Arguments?: -a
+Path?: /home/
+.  ..  raymond
+
+---Statistics---
+Elapsed time: 3 milliseconds
+Page Faults: 0
+Page Faults (reclaimed): 89
+
+G'day, Commander! What command would you like to run?
+	0. whoami	: Prints out the result of the whoami command
+	1. last		: Prints out the result of the last command
+	2. ls		: Prints out the result of a listing on a user specified path
+Option?:
+
