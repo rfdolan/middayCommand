@@ -8,6 +8,4 @@ v2 adds the ability to run user added commands in the background.
 In order to track these background commands a linkedlist is used which holds all
 currently running jobs.
 
-To test each program I manually tested every command. When testing running multiple
-background commands for v2, I ran into some errors that I was not able to fix in time 
-for submission. The program may segfault as a result. 
+To test each program I manually tested every command.
